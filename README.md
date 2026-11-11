@@ -23,3 +23,6 @@ Clone or download the repository, open the project in your IDE, and run the `Mai
 **PGRF1 (Computer Graphics)**  
 Faculty of Informatics and Management  
 University of Hradec Králové
+
+**Original author**
+Dominik Prokop at https://gitlab.com/Prokodo
