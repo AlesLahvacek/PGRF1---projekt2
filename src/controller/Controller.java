@@ -36,6 +36,7 @@ public class Controller {
     private final Polygon polygon;
     private final PolygonClipper clipper;
     private final Polygon clippingTriangle;
+    private final Polygon clippingSquare;
     private final PolygonRasterizer polygonRasterizer;
 
     private Point seedFillPoint;
@@ -56,6 +57,13 @@ public class Controller {
         new Point(40, 470)
     );
 
+    private static final List<Point> CLIPPING_SQUARE_VERTICES = List.of(
+        new Point(500, 200),
+        new Point(500, 100),
+        new Point(600, 100),
+        new Point(600, 200)
+    );
+
     public Controller(Canvas canvas, Toolbar toolbar) {
         this.canvas = canvas;
         this.toolbar = toolbar;
@@ -65,6 +73,7 @@ public class Controller {
         this.seedFiller = new RecursiveSeedFiller(canvas.getRaster());
         this.polygonRasterizer = new PolygonOutlineRasterizer(new XiaolinWuLineRasterizer(canvas.getRaster()));
         this.clippingTriangle = createPolygon(CLIPPING_TRIANGLE_VERTICES, CLIPPING_TRIANGLE_COLOR);
+        this.clippingSquare = createPolygon(CLIPPING_SQUARE_VERTICES, CLIPPING_TRIANGLE_COLOR);
     }
 
     public void init() {
@@ -99,7 +108,11 @@ public class Controller {
                 if (previewLine == null) {
                     return;
                 }
-                polygon.addLine(new Line(previewLine.getPoint1(), getPoint(event), LINE_COLOR));
+                polygon.addLine(new Line(
+                    previewLine.getPoint1(),
+                    previewLine.getPoint2(),
+                    LINE_COLOR
+                ));
                 previewLine = null;
                 render();
             }
@@ -109,7 +122,11 @@ public class Controller {
             @Override
             public void mouseDragged(MouseEvent event) {
                 if (previewLine != null) {
-                    previewLine = new Line(previewLine.getPoint1(), getPoint(event), PREVIEW_COLOR);
+                    previewLine = new Line(
+                        previewLine.getPoint1(),
+                        getPoint(event, event.isShiftDown(), event.isControlDown()),
+                        PREVIEW_COLOR
+                    );
                     render();
                 }
             }
@@ -135,6 +152,7 @@ public class Controller {
             polygonRasterizer.rasterize(withColor(clipped, CLIPPED_COLOR), null);
         }
         polygonRasterizer.rasterize(clippingTriangle, null);
+        polygonRasterizer.rasterize(clippingSquare, null);
         if (seedFillPoint != null) {
             seedFiller.fill(seedFillPoint.getX(), seedFillPoint.getY(), canvas.getBackgroundColor(), FILL_COLOR);
         }
@@ -174,6 +192,20 @@ public class Controller {
 
     private Point getPoint(MouseEvent event) {
         return new Point(event.getX(), event.getY());
+    }
+
+    private Point getPoint(MouseEvent event, boolean lockOrientation, boolean lockDiagonalOrientation) {
+        Point point = getPoint(event);
+        if (previewLine == null) {
+            return point;
+        }
+        if (lockDiagonalOrientation) {
+            return polygon.getPointWithDiagonalOrientation(previewLine.getPoint1(), point);
+        }
+        if (!lockOrientation) {
+            return point;
+        }
+        return polygon.getPointWithLockedOrientation(previewLine.getPoint1(), point);
     }
 
     private void startLine(MouseEvent event) {
